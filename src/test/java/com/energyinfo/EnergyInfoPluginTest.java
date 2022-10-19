@@ -1,13 +1,13 @@
-package com.example;
+package com.energyinfo;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;
 
-public class ExamplePluginTest
+public class EnergyInfoPluginTest
 {
 	public static void main(String[] args) throws Exception
 	{
-		ExternalPluginManager.loadBuiltin(ExamplePlugin.class);
+		ExternalPluginManager.loadBuiltin(EnergyInfoPlugin.class);
 		RuneLite.main(args);
 	}
 }

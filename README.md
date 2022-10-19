@@ -1,2 +1,2 @@
-# Example
-An example greeter plugin
+# Energy Info
+Displays run energy information as an infobox or as an overlay.
