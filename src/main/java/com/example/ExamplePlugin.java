@@ -1,4 +1,4 @@
-package com.energyinfo;
+package com.example;
 
 import com.google.inject.Provides;
 import javax.inject.Inject;
@@ -16,13 +16,13 @@ import net.runelite.client.plugins.PluginDescriptor;
 @PluginDescriptor(
 	name = "Example"
 )
-public class EnergyInfoPlugin extends Plugin
+public class ExamplePlugin extends Plugin
 {
 	@Inject
 	private Client client;
 
 	@Inject
-	private EnergyInfoConfig config;
+	private ExampleConfig config;
 
 	@Override
 	protected void startUp() throws Exception
@@ -46,8 +46,8 @@ public class EnergyInfoPlugin extends Plugin
 	}
 
 	@Provides
-	EnergyInfoConfig provideConfig(ConfigManager configManager)
+	ExampleConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(EnergyInfoConfig.class);
+		return configManager.getConfig(ExampleConfig.class);
 	}
 }
