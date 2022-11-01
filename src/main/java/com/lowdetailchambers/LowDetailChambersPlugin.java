@@ -21,7 +21,6 @@ import net.runelite.client.plugins.lowmemory.LowMemoryConfig;
 	name = "Low Detail Chambers",
 	description = "Turn off ground decorations and certain textures only inside of Chambers of Xeric",
 	tags = {"memory", "usage", "ground", "decorations", "chambers", "cox"},
-	enabledByDefault = false
 )
 public class LowDetailChambersPlugin extends Plugin
 {
