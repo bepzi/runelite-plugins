@@ -16,9 +16,11 @@ import net.runelite.client.config.ConfigManager;
 import net.runelite.client.config.RuneLiteConfig;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
+import net.runelite.client.events.PluginChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.lowmemory.LowMemoryConfig;
+import net.runelite.client.plugins.lowmemory.LowMemoryPlugin;
 
 @Slf4j
 @PluginDescriptor(name = "Automatic Low Detail", description = "Automatically turn off ground decorations while inside certain areas (like raids)", tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "theatre", "toa", "amascut", "sepulchre", "inferno"})
@@ -50,14 +52,17 @@ public class AutomaticLowDetailPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		lowDetailModeEnabled = false;
+		lowDetailModeEnabled = lowDetailPluginEnabled();
 		updateLowDetailMode();
 	}
 
 	@Override
 	protected void shutDown()
 	{
-		updateLowDetailMode();
+		if (!lowDetailPluginEnabled())
+		{
+			clientThread.invoke(() -> client.changeMemoryMode(false));
+		}
 	}
 
 	@Provides
@@ -71,6 +76,26 @@ public class AutomaticLowDetailPlugin extends Plugin
 	{
 		if (event.getGroup().equals(AutomaticLowDetailConfig.GROUP))
 		{
+			updateLowDetailMode();
+		}
+		else if (event.getGroup().equals(LowMemoryConfig.GROUP))
+		{
+			// Can't call updateLowDetailMode() immediately, because the Low Detail plugin is about to call
+			// client.changeMemoryMode(), which will undo anything we do now.
+			//
+			// If the Low Detail plugin was turned off, then we'll be free to re-disable ground decorations the next
+			// time we check whether we're in a supported area. Otherwise, it doesn't matter.
+			lowDetailModeEnabled = lowDetailPluginEnabled();
+			clientThread.invokeAtTickEnd(() -> clientThread.invokeLater(this::updateLowDetailMode));
+		}
+	}
+
+	@Subscribe
+	public void onPluginChanged(PluginChanged event)
+	{
+		if (event.getPlugin() instanceof LowMemoryPlugin)
+		{
+			lowDetailModeEnabled = lowDetailPluginEnabled();
 			updateLowDetailMode();
 		}
 	}
@@ -99,8 +124,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 				log.debug("Automatically enabled Low Detail Mode");
 				return true;
 			}
-
-			if (lowDetailModeEnabled && canDisableLowDetailMode())
+			else if (canDisableLowDetailMode())
 			{
 				client.changeMemoryMode(false);
 				lowDetailModeEnabled = false;
@@ -108,7 +132,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 				return true;
 			}
 
-			return false;
+			return true;
 		});
 	}
 
@@ -148,7 +172,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	private boolean canDisableLowDetailMode()
 	{
-		return lowDetailPluginDisabled() && !canEnableLowDetailMode();
+		return !lowDetailPluginEnabled() && !canEnableLowDetailMode();
 	}
 
 	// ====================================================================================
@@ -186,13 +210,13 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	// ====================================================================================
 
-	private boolean lowDetailPluginDisabled()
+	private boolean lowDetailPluginEnabled()
 	{
 		final String pluginEnabled = configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, "lowmemoryplugin");
 		if (!Boolean.parseBoolean(pluginEnabled))
 		{
-			return true;
+			return false;
 		}
-		return !configManager.getConfig(LowMemoryConfig.class).lowDetail();
+		return configManager.getConfig(LowMemoryConfig.class).lowDetail();
 	}
 }
