@@ -1,4 +1,4 @@
-package com.automaticlowdetail;
+package com.lowdetailraids;
 
 import net.runelite.client.RuneLite;
 import net.runelite.client.externalplugins.ExternalPluginManager;

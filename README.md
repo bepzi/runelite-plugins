@@ -11,3 +11,5 @@ This plugin was originally based on [Low Detail Chambers](https://runelite.net/p
 - Chambers of Xeric
 - Theatre of Blood
 - Tombs of Amascut
+- Inferno (and TzHaar-Ket-Rak's Challenges)
+- Hallowed Sepulchre

@@ -1,10 +1,10 @@
-package com.automaticlowdetail;
+package com.lowdetailraids;
 
 import com.google.inject.Provides;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
@@ -21,20 +21,16 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.lowmemory.LowMemoryConfig;
 
 @Slf4j
-@PluginDescriptor(
-	name = "Automatic Low Detail",
-	description = "Automatically turn off ground decorations while inside certain areas (like raids)",
-	tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "toa", "amascut", "sepulchre", "inferno"}
-)
+@PluginDescriptor(name = "Automatic Low Detail", description = "Automatically turn off ground decorations while inside certain areas (like raids)", tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "theatre", "toa", "amascut", "sepulchre", "inferno"})
 public class AutomaticLowDetailPlugin extends Plugin
 {
 	private static final int VARP_IN_RAID_ENCOUNTER = 2926;
 	private static final int VARBIT_IN_PARTY_TOMBS_OF_AMASCUT = 14345;
+	private static final int VARBIT_IN_INFERNO = 11878;
+	private static final int VARBIT_IN_HALLOWED_SEPULCHRE = 10392;
 
-	private static final Set<Integer> RELEVANT_EVENT_VARPS =
-		Stream.of(VARP_IN_RAID_ENCOUNTER).collect(Collectors.toCollection(HashSet::new));
-	private static final Set<Integer> RELEVANT_EVENT_VARBITS =
-		Stream.of(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT).collect(Collectors.toCollection(HashSet::new));
+	private static final Set<Integer> RELEVANT_EVENT_VARPS = new HashSet<>(Collections.singletonList(VARP_IN_RAID_ENCOUNTER));
+	private static final Set<Integer> RELEVANT_EVENT_VARBITS = new HashSet<>(Arrays.asList(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT, VARBIT_IN_INFERNO, VARBIT_IN_HALLOWED_SEPULCHRE));
 
 
 	@Inject
@@ -49,9 +45,12 @@ public class AutomaticLowDetailPlugin extends Plugin
 	@Inject
 	private AutomaticLowDetailConfig config;
 
+	private boolean lowDetailModeEnabled = false;
+
 	@Override
 	protected void startUp()
 	{
+		lowDetailModeEnabled = false;
 		updateLowDetailMode();
 	}
 
@@ -93,16 +92,22 @@ public class AutomaticLowDetailPlugin extends Plugin
 	private void updateLowDetailMode()
 	{
 		clientThread.invoke(() -> {
-			if (canEnableLowDetailMode())
+			if (!lowDetailModeEnabled && canEnableLowDetailMode())
 			{
 				client.changeMemoryMode(true);
+				lowDetailModeEnabled = true;
+				log.debug("Automatically enabled Low Detail Mode");
 				return true;
 			}
-			else if (canDisableLowDetailMode())
+
+			if (lowDetailModeEnabled && canDisableLowDetailMode())
 			{
 				client.changeMemoryMode(false);
+				lowDetailModeEnabled = false;
+				log.debug("Automatically disabled Low Detail Mode");
 				return true;
 			}
+
 			return false;
 		});
 	}
@@ -129,14 +134,24 @@ public class AutomaticLowDetailPlugin extends Plugin
 		{
 			return config.tombsOfAmascut();
 		}
+		else if (insideInferno())
+		{
+			return config.inferno();
+		}
+		else if (insideHallowedSepulchre())
+		{
+			return config.hallowedSepulchre();
+		}
 
 		return false;
 	}
 
 	private boolean canDisableLowDetailMode()
 	{
-		return !lowDetailPluginEnabled();
+		return lowDetailPluginDisabled() && !canEnableLowDetailMode();
 	}
+
+	// ====================================================================================
 
 	private boolean insideRaidEncounter()
 	{
@@ -159,13 +174,25 @@ public class AutomaticLowDetailPlugin extends Plugin
 		return insideRaidEncounter() && client.getVarbitValue(VARBIT_IN_PARTY_TOMBS_OF_AMASCUT) != 0;
 	}
 
-	private boolean lowDetailPluginEnabled()
+	private boolean insideInferno()
+	{
+		return client.getVarbitValue(VARBIT_IN_INFERNO) == 1;
+	}
+
+	private boolean insideHallowedSepulchre()
+	{
+		return client.getVarbitValue(VARBIT_IN_HALLOWED_SEPULCHRE) > 0;
+	}
+
+	// ====================================================================================
+
+	private boolean lowDetailPluginDisabled()
 	{
 		final String pluginEnabled = configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, "lowmemoryplugin");
 		if (!Boolean.parseBoolean(pluginEnabled))
 		{
-			return false;
+			return true;
 		}
-		return configManager.getConfig(LowMemoryConfig.class).lowDetail();
+		return !configManager.getConfig(LowMemoryConfig.class).lowDetail();
 	}
 }
