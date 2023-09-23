@@ -1,13 +1,13 @@
-package com.lowdetailraids;
+package com.automaticlowdetail;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup(LowDetailRaidsConfig.GROUP)
-public interface LowDetailRaidsConfig extends Config
+@ConfigGroup(AutomaticLowDetailConfig.GROUP)
+public interface AutomaticLowDetailConfig extends Config
 {
-	String GROUP = "lowdetailraids";
+	String GROUP = "automaticlowdetail";
 
 	@ConfigItem(keyName = "chambersOfXeric", name = "Chambers of Xeric", description = "Whether to enable Low Detail while inside the Chambers of Xeric")
 	default boolean chambersOfXeric()

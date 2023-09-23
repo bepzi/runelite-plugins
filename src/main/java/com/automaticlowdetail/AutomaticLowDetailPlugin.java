@@ -1,8 +1,11 @@
-package com.lowdetailraids;
+package com.automaticlowdetail;
 
 import com.google.inject.Provides;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.inject.Inject;
-
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
@@ -19,14 +22,20 @@ import net.runelite.client.plugins.lowmemory.LowMemoryConfig;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Low Detail Raids",
-	description = "Automatically turn off ground decorations while inside raids",
-	tags = {"memory", "ground", "decorations", "chambers", "cox", "theatre", "tob", "tombs", "amascut", "toa"}
+	name = "Automatic Low Detail",
+	description = "Automatically turn off ground decorations while inside certain areas (like raids)",
+	tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "toa", "amascut", "sepulchre", "inferno"}
 )
-public class LowDetailRaidsPlugin extends Plugin
+public class AutomaticLowDetailPlugin extends Plugin
 {
 	private static final int VARP_IN_RAID_ENCOUNTER = 2926;
 	private static final int VARBIT_IN_PARTY_TOMBS_OF_AMASCUT = 14345;
+
+	private static final Set<Integer> RELEVANT_EVENT_VARPS =
+		Stream.of(VARP_IN_RAID_ENCOUNTER).collect(Collectors.toCollection(HashSet::new));
+	private static final Set<Integer> RELEVANT_EVENT_VARBITS =
+		Stream.of(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT).collect(Collectors.toCollection(HashSet::new));
+
 
 	@Inject
 	private Client client;
@@ -38,7 +47,7 @@ public class LowDetailRaidsPlugin extends Plugin
 	private ConfigManager configManager;
 
 	@Inject
-	private LowDetailRaidsConfig config;
+	private AutomaticLowDetailConfig config;
 
 	@Override
 	protected void startUp()
@@ -53,15 +62,15 @@ public class LowDetailRaidsPlugin extends Plugin
 	}
 
 	@Provides
-	LowDetailRaidsConfig getConfig(ConfigManager configManager)
+	AutomaticLowDetailConfig getConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(LowDetailRaidsConfig.class);
+		return configManager.getConfig(AutomaticLowDetailConfig.class);
 	}
 
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (event.getGroup().equals(LowDetailRaidsConfig.GROUP))
+		if (event.getGroup().equals(AutomaticLowDetailConfig.GROUP))
 		{
 			updateLowDetailMode();
 		}
@@ -70,15 +79,15 @@ public class LowDetailRaidsPlugin extends Plugin
 	@Subscribe
 	public void onVarbitChanged(VarbitChanged event)
 	{
-		if (varbitChangedEventRelatedToRaid(event))
+		if (varbitChangedEventIsRelevant(event))
 		{
 			updateLowDetailMode();
 		}
 	}
 
-	private boolean varbitChangedEventRelatedToRaid(VarbitChanged event)
+	private boolean varbitChangedEventIsRelevant(VarbitChanged event)
 	{
-		return event.getVarpId() == VARP_IN_RAID_ENCOUNTER || event.getVarbitId() == Varbits.IN_RAID || event.getVarbitId() == Varbits.THEATRE_OF_BLOOD || event.getVarbitId() == VARBIT_IN_PARTY_TOMBS_OF_AMASCUT;
+		return RELEVANT_EVENT_VARPS.contains(event.getVarpId()) || RELEVANT_EVENT_VARBITS.contains(event.getVarbitId());
 	}
 
 	private void updateLowDetailMode()
@@ -104,10 +113,6 @@ public class LowDetailRaidsPlugin extends Plugin
 		// Don't set low memory before the login screen is ready to prevent loading the low detail textures,
 		// which breaks the gpu plugin due to it requiring the 128x128px textures
 		if (client.getGameState().getState() < GameState.LOGIN_SCREEN.getState())
-		{
-			return false;
-		}
-		if (!insideRaidEncounter())
 		{
 			return false;
 		}
