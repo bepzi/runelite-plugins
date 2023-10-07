@@ -23,9 +23,16 @@ import net.runelite.client.plugins.lowmemory.LowMemoryConfig;
 import net.runelite.client.plugins.lowmemory.LowMemoryPlugin;
 
 @Slf4j
-@PluginDescriptor(name = "Automatic Low Detail", description = "Automatically turn off ground decorations while inside certain areas (like raids)", tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "theatre", "toa", "amascut", "sepulchre", "inferno"})
+@PluginDescriptor(
+	name = "Automatic Low Detail",
+	description = "Automatically turn off ground decorations while inside certain areas (like raids)",
+	tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "theatre", "toa", "amascut", "sepulchre", "inferno"},
+	configName = AutomaticLowDetailPlugin.CONFIG_NAME
+)
 public class AutomaticLowDetailPlugin extends Plugin
 {
+	public static final String CONFIG_NAME = "LowDetailRaidsPlugin";
+
 	private static final int VARP_IN_RAID_ENCOUNTER = 2926;
 	private static final int VARBIT_IN_PARTY_TOMBS_OF_AMASCUT = 14345;
 	private static final int VARBIT_IN_INFERNO = 11878;
@@ -33,7 +40,6 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	private static final Set<Integer> RELEVANT_EVENT_VARPS = new HashSet<>(Collections.singletonList(VARP_IN_RAID_ENCOUNTER));
 	private static final Set<Integer> RELEVANT_EVENT_VARBITS = new HashSet<>(Arrays.asList(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT, VARBIT_IN_INFERNO, VARBIT_IN_HALLOWED_SEPULCHRE));
-
 
 	@Inject
 	private Client client;
