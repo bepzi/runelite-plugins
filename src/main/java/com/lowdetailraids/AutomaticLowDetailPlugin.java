@@ -2,14 +2,16 @@ package com.lowdetailraids;
 
 import com.google.inject.Provides;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
+import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -38,7 +40,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 	private static final int VARBIT_IN_INFERNO = 11878;
 	private static final int VARBIT_IN_HALLOWED_SEPULCHRE = 10392;
 
-	private static final Set<Integer> RELEVANT_EVENT_VARPS = new HashSet<>(Collections.singletonList(VARP_IN_RAID_ENCOUNTER));
+	private static final Set<Integer> RELEVANT_EVENT_VARPS = new HashSet<>(Arrays.asList(VARP_IN_RAID_ENCOUNTER, VarPlayer.IN_RAID_PARTY));
 	private static final Set<Integer> RELEVANT_EVENT_VARBITS = new HashSet<>(Arrays.asList(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT, VARBIT_IN_INFERNO, VARBIT_IN_HALLOWED_SEPULCHRE));
 
 	@Inject
@@ -53,21 +55,31 @@ public class AutomaticLowDetailPlugin extends Plugin
 	@Inject
 	private AutomaticLowDetailConfig config;
 
+	enum AutomaticLowDetailRegion
+	{
+		CHAMBERS_OF_XERIC,
+		THEATRE_OF_BLOOD,
+		TOMBS_OF_AMASCUT,
+		INFERNO,
+		HALLOWED_SEPULCHRE
+	}
+
 	private boolean lowDetailModeEnabled = false;
 
 	@Override
 	protected void startUp()
 	{
 		lowDetailModeEnabled = lowDetailPluginEnabled();
-		updateLowDetailMode();
+		clientThread.invoke(this::updateLowDetailMode);
 	}
 
 	@Override
 	protected void shutDown()
 	{
-		if (!lowDetailPluginEnabled())
+		if (!lowDetailPluginEnabled() && lowDetailModeEnabled)
 		{
 			clientThread.invoke(() -> client.changeMemoryMode(false));
+			lowDetailModeEnabled = false;
 		}
 	}
 
@@ -92,6 +104,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 			// If the Low Detail plugin was turned off, then we'll be free to re-disable ground decorations the next
 			// time we check whether we're in a supported area. Otherwise, it doesn't matter.
 			lowDetailModeEnabled = lowDetailPluginEnabled();
+			// TODO: Can this be simplified to just invokeAtTickEnd?
 			clientThread.invokeAtTickEnd(() -> clientThread.invokeLater(this::updateLowDetailMode));
 		}
 	}
@@ -103,6 +116,21 @@ public class AutomaticLowDetailPlugin extends Plugin
 		{
 			lowDetailModeEnabled = lowDetailPluginEnabled();
 			updateLowDetailMode();
+		}
+	}
+
+	@Subscribe
+	public void onGameStateChanged(GameStateChanged gameStateChanged)
+	{
+		if (lowDetailPluginEnabled())
+		{
+			return;
+		}
+
+		if (gameStateChanged.getGameState() == GameState.STARTING)
+		{
+			client.changeMemoryMode(false);
+			lowDetailModeEnabled = false;
 		}
 	}
 
@@ -122,63 +150,58 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	private void updateLowDetailMode()
 	{
-		clientThread.invoke(() -> {
-			if (!lowDetailModeEnabled && canEnableLowDetailMode())
-			{
-				client.changeMemoryMode(true);
-				lowDetailModeEnabled = true;
-				log.debug("Automatically enabled Low Detail Mode");
-				return true;
-			}
-			else if (canDisableLowDetailMode())
-			{
-				client.changeMemoryMode(false);
-				lowDetailModeEnabled = false;
-				log.debug("Automatically disabled Low Detail Mode");
-				return true;
-			}
+		if (lowDetailPluginEnabled())
+		{
+			return;
+		}
 
-			return true;
-		});
+		Optional<AutomaticLowDetailRegion> region = canEnableLowDetailMode();
+		if (!lowDetailModeEnabled && region.isPresent())
+		{
+			client.changeMemoryMode(true);
+			lowDetailModeEnabled = true;
+			log.debug("Automatically enabled Low Detail Mode for region: {}", region.get());
+		}
+		else if (lowDetailModeEnabled && !region.isPresent())
+		{
+			client.changeMemoryMode(false);
+			lowDetailModeEnabled = false;
+			log.debug("Automatically disabled Low Detail Mode");
+		}
 	}
 
-	private boolean canEnableLowDetailMode()
+	private Optional<AutomaticLowDetailRegion> canEnableLowDetailMode()
 	{
 		// When the client starts it initializes the texture size based on the memory mode setting.
 		// Don't set low memory before the login screen is ready to prevent loading the low detail textures,
 		// which breaks the gpu plugin due to it requiring the 128x128px textures
 		if (client.getGameState().getState() < GameState.LOGIN_SCREEN.getState())
 		{
-			return false;
+			return Optional.empty();
 		}
 
-		if (insideChambersOfXeric())
+		if (insideChambersOfXeric() && config.chambersOfXeric())
 		{
-			return config.chambersOfXeric();
+			return Optional.of(AutomaticLowDetailRegion.CHAMBERS_OF_XERIC);
 		}
-		else if (insideTheatreOfBlood())
+		else if (insideTheatreOfBlood() && config.theatreOfBlood())
 		{
-			return config.theatreOfBlood();
+			return Optional.of(AutomaticLowDetailRegion.THEATRE_OF_BLOOD);
 		}
-		else if (insideTombsOfAmascut())
+		else if (insideTombsOfAmascut() && config.tombsOfAmascut())
 		{
-			return config.tombsOfAmascut();
+			return Optional.of(AutomaticLowDetailRegion.TOMBS_OF_AMASCUT);
 		}
-		else if (insideInferno())
+		else if (insideInferno() && config.inferno())
 		{
-			return config.inferno();
+			return Optional.of(AutomaticLowDetailRegion.INFERNO);
 		}
-		else if (insideHallowedSepulchre())
+		else if (insideHallowedSepulchre() && config.hallowedSepulchre())
 		{
-			return config.hallowedSepulchre();
+			return Optional.of(AutomaticLowDetailRegion.HALLOWED_SEPULCHRE);
 		}
 
-		return false;
-	}
-
-	private boolean canDisableLowDetailMode()
-	{
-		return !lowDetailPluginEnabled() && !canEnableLowDetailMode();
+		return Optional.empty();
 	}
 
 	// ====================================================================================
@@ -190,7 +213,9 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	private boolean insideChambersOfXeric()
 	{
-		return client.getVarbitValue(Varbits.IN_RAID) != 0;
+		int raidPartyID = client.getVarpValue(VarPlayer.IN_RAID_PARTY);
+		boolean inRaidChambers = client.getVarbitValue(Varbits.IN_RAID) == 1;
+		return raidPartyID != -1 && inRaidChambers;
 	}
 
 	private boolean insideTheatreOfBlood()
