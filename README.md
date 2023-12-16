@@ -16,14 +16,20 @@ This plugin was originally based on [Low Detail Chambers](https://runelite.net/p
 
 ### Changelog
 
-#### v1.1
+#### v1.1.1 (Patch release)
+
+- Fixed CoX scouting breaking when reloading the raid from the inside stairs (See [#2](https://github.com/bepzi/runelite-plugins/issues/2))
+- Changed internal logic for changing low detail mode to only be applied if absolutely necessary
+- Minor code optimizations and improvements
+
+#### v1.1 (Minor release)
 
 - Renamed plugin to "Automatic Low Detail"
 - Added support for Inferno (and TzHaar-Ket-Rak's Challenges)
-- Added support for Hallowed Sepulchre (See #1)
+- Added support for Hallowed Sepulchre (See [#1](https://github.com/bepzi/runelite-plugins/issues/1))
 - Fixed a bug where disabling Runelite's Low Detail plugin could incorrectly disable low detail mode while Automatic Low Detail was still active
 
-#### v1.0
+#### v1.0 (Major release)
 
 - Initial release
 - Added support for Theatre of Blood
