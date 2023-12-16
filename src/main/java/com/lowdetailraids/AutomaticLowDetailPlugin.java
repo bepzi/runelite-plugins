@@ -69,14 +69,14 @@ public class AutomaticLowDetailPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		lowDetailModeEnabled = lowDetailPluginEnabled();
+		lowDetailModeEnabled = vanillaLowDetailPluginEnabled();
 		clientThread.invoke(this::updateLowDetailMode);
 	}
 
 	@Override
 	protected void shutDown()
 	{
-		if (!lowDetailPluginEnabled() && lowDetailModeEnabled)
+		if (!vanillaLowDetailPluginEnabled() && lowDetailModeEnabled)
 		{
 			clientThread.invoke(() -> client.changeMemoryMode(false));
 			lowDetailModeEnabled = false;
@@ -103,7 +103,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 			//
 			// If the Low Detail plugin was turned off, then we'll be free to re-disable ground decorations the next
 			// time we check whether we're in a supported area. Otherwise, it doesn't matter.
-			lowDetailModeEnabled = lowDetailPluginEnabled();
+			lowDetailModeEnabled = vanillaLowDetailPluginEnabled();
 			// TODO: Can this be simplified to just invokeAtTickEnd?
 			clientThread.invokeAtTickEnd(() -> clientThread.invokeLater(this::updateLowDetailMode));
 		}
@@ -114,7 +114,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 	{
 		if (event.getPlugin() instanceof LowMemoryPlugin)
 		{
-			lowDetailModeEnabled = lowDetailPluginEnabled();
+			lowDetailModeEnabled = vanillaLowDetailPluginEnabled();
 			updateLowDetailMode();
 		}
 	}
@@ -122,7 +122,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged gameStateChanged)
 	{
-		if (lowDetailPluginEnabled())
+		if (vanillaLowDetailPluginEnabled())
 		{
 			return;
 		}
@@ -150,7 +150,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	private void updateLowDetailMode()
 	{
-		if (lowDetailPluginEnabled())
+		if (vanillaLowDetailPluginEnabled())
 		{
 			return;
 		}
@@ -241,7 +241,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	// ====================================================================================
 
-	private boolean lowDetailPluginEnabled()
+	private boolean vanillaLowDetailPluginEnabled()
 	{
 		final String pluginEnabled = configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, "lowmemoryplugin");
 		if (!Boolean.parseBoolean(pluginEnabled))
