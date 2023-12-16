@@ -94,18 +94,18 @@ public class AutomaticLowDetailPlugin extends Plugin
 	{
 		if (event.getGroup().equals(AutomaticLowDetailConfig.GROUP))
 		{
-			updateLowDetailMode();
+			clientThread.invoke(this::updateLowDetailMode);
 		}
 		else if (event.getGroup().equals(LowMemoryConfig.GROUP))
 		{
+			lowDetailModeEnabled = vanillaLowDetailPluginEnabled();
+
 			// Can't call updateLowDetailMode() immediately, because the Low Detail plugin is about to call
 			// client.changeMemoryMode(), which will undo anything we do now.
 			//
-			// If the Low Detail plugin was turned off, then we'll be free to re-disable ground decorations the next
-			// time we check whether we're in a supported area. Otherwise, it doesn't matter.
-			lowDetailModeEnabled = vanillaLowDetailPluginEnabled();
-			// TODO: Can this be simplified to just invokeAtTickEnd?
-			clientThread.invokeAtTickEnd(() -> clientThread.invokeLater(this::updateLowDetailMode));
+			// clientThread.invoke() and clientThread.invokeLater() do not work; we must wait until the end
+			// of the client tick.
+			clientThread.invokeAtTickEnd(this::updateLowDetailMode);
 		}
 	}
 
@@ -115,7 +115,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 		if (event.getPlugin() instanceof LowMemoryPlugin)
 		{
 			lowDetailModeEnabled = vanillaLowDetailPluginEnabled();
-			updateLowDetailMode();
+			clientThread.invoke(this::updateLowDetailMode);
 		}
 	}
 
@@ -148,6 +148,14 @@ public class AutomaticLowDetailPlugin extends Plugin
 		return RELEVANT_EVENT_VARPS.contains(event.getVarpId()) || RELEVANT_EVENT_VARBITS.contains(event.getVarbitId());
 	}
 
+	/**
+	 * Attempts to correct the client memory mode depending on whether the player is in a valid region for automatic
+	 * low detail mode and if the memory mode really has changed and needs to be adjusted.
+	 * <p>
+	 * If Runelite's vanilla Low Detail plugin is active, this function will do nothing.
+	 * <p>
+	 * <strong>This function must be called on the client thread.</strong>
+	 */
 	private void updateLowDetailMode()
 	{
 		if (vanillaLowDetailPluginEnabled())
