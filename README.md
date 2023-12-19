@@ -21,6 +21,7 @@ This plugin was originally based on [Low Detail Chambers](https://runelite.net/p
 - Fixed CoX scouting breaking when reloading the raid from the inside stairs (See [#2](https://github.com/bepzi/runelite-plugins/issues/2))
 - Changed internal logic for changing low detail mode to only be applied if absolutely necessary
 - Minor code optimizations and improvements
+- Flag incompatibility with Low Detail Chambers
 
 #### v1.1 (Minor release)
 

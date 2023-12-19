@@ -29,7 +29,8 @@ import net.runelite.client.plugins.lowmemory.LowMemoryPlugin;
 	name = "Automatic Low Detail",
 	description = "Automatically turn off ground decorations while inside certain areas (like raids)",
 	tags = {"memory", "ground", "decorations", "cox", "xeric", "tob", "theatre", "toa", "amascut", "sepulchre", "inferno"},
-	configName = AutomaticLowDetailPlugin.CONFIG_NAME
+	configName = AutomaticLowDetailPlugin.CONFIG_NAME,
+	conflicts = "Low Detail Chambers"
 )
 public class AutomaticLowDetailPlugin extends Plugin
 {
