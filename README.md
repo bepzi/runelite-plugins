@@ -16,12 +16,16 @@ This plugin was originally based on [Low Detail Chambers](https://runelite.net/p
 
 ### Changelog
 
+#### v1.1.2 (Patch release)
+
+- Fixed Automatic Low Detail being disabled after starting a Chambers of Xeric raid (See [#4](https://github.com/bepzi/runelite-plugins/issues/4))
+
 #### v1.1.1 (Patch release)
 
 - Fixed CoX scouting breaking when reloading the raid from the inside stairs (See [#2](https://github.com/bepzi/runelite-plugins/issues/2))
-- Changed internal logic for changing low detail mode to only be applied if absolutely necessary
+- Changed internal logic for changing low detail mode to only be applied if absolutely necessary (See [#3](https://github.com/bepzi/runelite-plugins/issues/3))
 - Minor code optimizations and improvements
-- Flag incompatibility with Low Detail Chambers
+- Flagged incompatibility with Low Detail Chambers
 
 #### v1.1 (Minor release)
 

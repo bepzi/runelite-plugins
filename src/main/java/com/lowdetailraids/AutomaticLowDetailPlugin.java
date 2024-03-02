@@ -42,7 +42,7 @@ public class AutomaticLowDetailPlugin extends Plugin
 	private static final int VARBIT_IN_HALLOWED_SEPULCHRE = 10392;
 
 	private static final Set<Integer> RELEVANT_EVENT_VARPS = new HashSet<>(Arrays.asList(VARP_IN_RAID_ENCOUNTER, VarPlayer.IN_RAID_PARTY));
-	private static final Set<Integer> RELEVANT_EVENT_VARBITS = new HashSet<>(Arrays.asList(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT, VARBIT_IN_INFERNO, VARBIT_IN_HALLOWED_SEPULCHRE));
+	private static final Set<Integer> RELEVANT_EVENT_VARBITS = new HashSet<>(Arrays.asList(Varbits.IN_RAID, Varbits.THEATRE_OF_BLOOD, Varbits.RAID_STATE, VARBIT_IN_PARTY_TOMBS_OF_AMASCUT, VARBIT_IN_INFERNO, VARBIT_IN_HALLOWED_SEPULCHRE));
 
 	@Inject
 	private Client client;
@@ -55,16 +55,6 @@ public class AutomaticLowDetailPlugin extends Plugin
 
 	@Inject
 	private AutomaticLowDetailConfig config;
-
-	enum AutomaticLowDetailRegion
-	{
-		CHAMBERS_OF_XERIC,
-		THEATRE_OF_BLOOD,
-		TOMBS_OF_AMASCUT,
-		INFERNO,
-		HALLOWED_SEPULCHRE
-	}
-
 	private boolean lowDetailModeEnabled = false;
 
 	@Override
@@ -213,18 +203,40 @@ public class AutomaticLowDetailPlugin extends Plugin
 		return Optional.empty();
 	}
 
-	// ====================================================================================
-
 	private boolean insideRaidEncounter()
 	{
 		return client.getVarpValue(VARP_IN_RAID_ENCOUNTER) != 0;
 	}
 
+	// ====================================================================================
+
 	private boolean insideChambersOfXeric()
 	{
+		if (client.getVarbitValue(Varbits.IN_RAID) != 1)
+		{
+			// Not inside the lobby or the raid levels.
+			return false;
+		}
+
 		int raidPartyID = client.getVarpValue(VarPlayer.IN_RAID_PARTY);
-		boolean inRaidChambers = client.getVarbitValue(Varbits.IN_RAID) == 1;
-		return raidPartyID != -1 && inRaidChambers;
+		if (raidPartyID == -1)
+		{
+			// Raid party ID is -1 when:
+			// 1. We're not in a raid party at all (e.g. outside the raid)
+			// 2. We were in a party but we're currently reloading the raid from the inside stairs
+			// 3. We were in a party but then we started the raid
+			//
+			// Only #3 is a valid reason to enable low detail mode. The other two cases should NOT result
+			// in toggling low detail.
+
+			// The plugin crashes if we check RAID_STATE while not inside Chambers, so only check
+			// RAID_STATE here now that we know it's safe.
+			int raidState = client.getVarbitValue(Varbits.RAID_STATE);
+			return raidState != 0 && raidState != 5;
+		}
+
+		// We're in the lobby, we haven't started the raid, and we're not currently reloading the raid.
+		return true;
 	}
 
 	private boolean insideTheatreOfBlood()
@@ -248,8 +260,6 @@ public class AutomaticLowDetailPlugin extends Plugin
 		return client.getVarbitValue(VARBIT_IN_HALLOWED_SEPULCHRE) > 0;
 	}
 
-	// ====================================================================================
-
 	private boolean vanillaLowDetailPluginEnabled()
 	{
 		final String pluginEnabled = configManager.getConfiguration(RuneLiteConfig.GROUP_NAME, "lowmemoryplugin");
@@ -258,5 +268,16 @@ public class AutomaticLowDetailPlugin extends Plugin
 			return false;
 		}
 		return configManager.getConfig(LowMemoryConfig.class).lowDetail();
+	}
+
+	// ====================================================================================
+
+	enum AutomaticLowDetailRegion
+	{
+		CHAMBERS_OF_XERIC,
+		THEATRE_OF_BLOOD,
+		TOMBS_OF_AMASCUT,
+		INFERNO,
+		HALLOWED_SEPULCHRE
 	}
 }
